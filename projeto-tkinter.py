@@ -44,7 +44,59 @@ class ScrollableDataFrame(customtkinter.CTkScrollableFrame):
             rowCounter += 1
 
         
-
+class ViewsFrameAddCollection(customtkinter.CTkFrame): #ver documentos
+    def __init__(self, master):
+        super().__init__(master)
+        try:
+            workingDatabase = MenuFrame.optionmenu_var.get()
+            workingCollection = MenuFrame.optionmenu_varCol.get()
+            
+            print(workingCollection, workingDatabase)
+            
+            mydb = myclient[workingDatabase]
+            
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", "Selecione uma base de dados primeiro")
+            raise ValueError("No db selected")
+    
+        
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        self.title = "Adicionar Collection"
+        
+        self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
+        self.title.configure(font=("Arial", 30))
+        
+        self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
+        
+class ViewsFrameDeleteCollection(customtkinter.CTkFrame): #ver documentos
+    def __init__(self, master):
+        super().__init__(master)
+        try:
+            workingDatabase = MenuFrame.optionmenu_var.get()
+            workingCollection = MenuFrame.optionmenu_varCol.get()
+            
+            print(workingCollection, workingDatabase)
+            
+            mydb = myclient[workingDatabase]
+            
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", "Selecione uma base de dados primeiro")
+            raise ValueError("No db selected")
+    
+        
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        self.title = "Apagar Collection"
+        
+        self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
+        self.title.configure(font=("Arial", 30))
+        
+        self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
 class ViewsFrame(customtkinter.CTkFrame): #ver documentos
     def __init__(self, master):
@@ -111,15 +163,14 @@ class ViewsFrameAdd(customtkinter.CTkFrame): #ver documentos
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
         
-        self.title = "Ver Documentos"
+        self.title = "Adicionar Documentos"
         
         self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
         self.title.configure(font=("Arial", 30))
         
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
-        self.dataList = ScrollableDataFrame(self, arr)
-        self.dataList.grid(row=1, column=0, padx="5", pady="5", sticky="nsew")
+
         
 
 class ViewsFrameDelete(customtkinter.CTkFrame): #ver documentos
@@ -156,10 +207,9 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #ver documentos
         
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
-        self.dataList = ScrollableDataFrame(self, arr)
-        self.dataList.grid(row=1, column=0, padx="5", pady="5", sticky="nsew")
         
-class ViewsFrameGerirDB(customtkinter.CTkFrame): #ver documentos
+        
+class ViewsFrameGerirDB(customtkinter.CTkFrame): #Gerir Base de Dados
     
     def createDatabase(self):
        
@@ -174,7 +224,20 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #ver documentos
 
             
             tkMessageBox.showinfo("Sucesso!", f"Base de dados {database} criada com sucesso")
+            restart_program()
             
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", e)
+            
+    def deleteDatabase(self):
+       
+        try:
+            database = self.DatabaseName.get()
+            
+            myclient.drop_database(database)
+            
+            tkMessageBox.showinfo("Sucesso!", f"Base de dados {database} apagada com sucesso")
+            restart_program()
             
         except Exception as e:
             tkMessageBox.showinfo("Erro!", e)
@@ -235,14 +298,39 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #ver documentos
         self.DatabaseNameLabel.grid(row=3, column=0, padx=12, pady=5, sticky="nw")
         self.DatabaseName = customtkinter.CTkEntry(self, width=250)
         self.DatabaseName.grid(row=4, column=0, padx=12, pady=5, sticky="nw")
-        self.AddDB = customtkinter.CTkButton(self, text="Delete Database", width=100, corner_radius=6, command=self.createDatabase)
+        self.AddDB = customtkinter.CTkButton(self, text="Delete Database", width=100, corner_radius=6, command=self.deleteDatabase)
         self.AddDB.configure(font=("Arial", 20))
         self.AddDB.grid(row=5, column=0, padx=12, pady=5, sticky="nw")
         self.buttonDelDB.configure(font=("Arial", 20))    
         self.buttonDelDB.grid(row=2, column=0, padx=12, pady=5, sticky="nw")
         
 
-
+class ViewsFrameSearch(customtkinter.CTkFrame): #Perquisar
+    def __init__(self, master):
+        super().__init__(master)
+        try:
+            workingDatabase = MenuFrame.optionmenu_var.get()
+            workingCollection = MenuFrame.optionmenu_varCol.get()
+            
+            print(workingCollection, workingDatabase)
+            
+            mydb = myclient[workingDatabase]
+            
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", "Selecione uma base de dados primeiro")
+            raise ValueError("No db selected")
+    
+        
+        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        self.title = "Pesquisar"
+        
+        self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
+        self.title.configure(font=("Arial", 30))
+        
+        self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
 
 class MenuFrame(customtkinter.CTkFrame):
@@ -303,11 +391,23 @@ class MenuFrame(customtkinter.CTkFrame):
         self.buttonVerDocs = customtkinter.CTkButton(self, text="Ver Documentos", command=master.changeFrame2)
         self.buttonVerDocs.grid(row=7, column=0, padx=20, pady=10, sticky="w")
         
-        self.buttonAddDocs = customtkinter.CTkButton(self, text="Adicionar Documento", command=master.changeFrameAdd)
-        self.buttonAddDocs.grid(row=8, column=0, padx=20, pady=10, sticky="w")
+        self.buttonAddCol = customtkinter.CTkButton(self, text="Adicionar Collection", command=master.changeFrameAddCol)
+        self.buttonAddCol.grid(row=8, column=0, padx=20, pady=10, sticky="w")
         
-        self.buttonDeleteDocs = customtkinter.CTkButton(self, text="Remover Documento", command=master.changeFrameDelete)
-        self.buttonDeleteDocs.grid(row=9, column=0, padx=20, pady=10, sticky="w")
+        self.buttonDeleteCol = customtkinter.CTkButton(self, text="Remover Collection", command=master.changeFrameDelCol)
+        self.buttonDeleteCol.grid(row=9, column=0, padx=20, pady=10, sticky="w")
+        
+        self.buttonAddDocs = customtkinter.CTkButton(self, text="Adicionar Documento", command=master.changeFrameAddDoc)
+        self.buttonAddDocs.grid(row=10, column=0, padx=20, pady=10, sticky="w")
+        
+        self.buttonDeleteDocs = customtkinter.CTkButton(self, text="Remover Documento", command=master.changeFrameDeleteDoc)
+        self.buttonDeleteDocs.grid(row=11, column=0, padx=20, pady=10, sticky="w")
+        
+        self.buttonSearch = customtkinter.CTkButton(self, text="Pesquisar", command=master.changeFrameSearch)
+        self.buttonSearch.grid(row=12, column=0, padx=20, pady=10, sticky="w")
+        
+        self.buttonExit = customtkinter.CTkButton(self, text="Sair", command=master.sair)
+        self.buttonExit.grid(row=13, column=0, padx=20, pady=10, sticky="w")
         
 
 
@@ -338,14 +438,28 @@ class App(customtkinter.CTk):
         self.ViewsFrame = ViewsFrame(self)
         self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
         
-    def changeFrameAdd(self):
+    def changeFrameAddCol(self):
+        self.ViewsFrame = ViewsFrameAddCollection(self)
+        self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
+        
+    def changeFrameDelCol(self):
+        self.ViewsFrame = ViewsFrameDeleteCollection(self)
+        self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
+        
+    def changeFrameAddDoc(self):
         self.ViewsFrame = ViewsFrameAdd(self)
         self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
         
-    def changeFrameDelete(self):
+    def changeFrameDeleteDoc(self):
         self.ViewsFrame = ViewsFrameDelete(self)
         self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
         
+    def changeFrameSearch(self):
+        self.ViewsFrame = ViewsFrameSearch(self)
+        self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
+        
+    def sair(self):
+        quit()
 
 app = App()
 app.mainloop()
