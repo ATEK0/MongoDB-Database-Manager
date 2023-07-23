@@ -1,4 +1,5 @@
 import customtkinter
+import tkinter as tk
 import json
 import pymongo
 import tkinter.messagebox as tkMessageBox
@@ -8,40 +9,86 @@ myclient = pymongo.MongoClient("mongodb://localhost:27017/") # string de conexao
 import os
 import sys
 import time
-
-def restart_program():
-    python = sys.executable
-    os.execl(python, python, *sys.argv)
     
 customtkinter.set_appearance_mode("System") 
 customtkinter.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
 
-class ScrollableDataFrame(customtkinter.CTkScrollableFrame):
+# class ScrollableDataFrame(customtkinter.CTkScrollableFrame):
+#     def __init__(self, master, data):
+#         super().__init__(master)
+        
+#         # Find all unique fields from the data
+#         fieldsName = set()
+#         for documents in data:
+#             fieldsName.update(documents.keys())
+
+#         rowCounter = 1
+#         conta = 0
+#         count = 0
+        
+#         for document in fieldsName:
+#             self.title = customtkinter.CTkLabel(self, text=document, fg_color="#3b3b3b", corner_radius=6)
+#             self.title.configure(font=("Arial", 12))
+#             self.title.grid(row=0, column=count, padx=5, pady=5, sticky="nsew")
+#             count += 1
+
+#         for documents in data:
+#             columnCounter = 0
+#             for field in fieldsName:
+#                 self.documentData = customtkinter.CTkLabel(self, text=documents.get(field, ''), corner_radius=6)
+#                 self.documentData.configure(font=("Arial", 12))
+#                 self.documentData.grid(row=rowCounter, column=columnCounter, padx=5, pady=5, sticky="nsew")
+#                 columnCounter += 1
+#                 conta += 1
+#             rowCounter += 1
+
+class ScrollableDataFrame(tk.Frame):
     def __init__(self, master, data):
         super().__init__(master)
-            
+
+        # Find all unique fields from the data
+        fieldsName = set()
+        for documents in data:
+            fieldsName.update(documents.keys())
+
+        # Move 'id' field to the beginning of the set
+        fieldsName.discard('_id')
+        fieldsName = ['_id'] + sorted(fieldsName)
+
         rowCounter = 1
         conta = 0
         count = 0
-        
-        fieldsName = []
+
+        canvas = tk.Canvas(self, bg="white", highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create horizontal scrollbar
+        x_scrollbar = tk.Scrollbar(self, orient=tk.HORIZONTAL, command=canvas.xview)
+        x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        canvas.configure(xscrollcommand=x_scrollbar.set)
+
+        content_frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=content_frame, anchor=tk.NW)
+
+        for document in fieldsName:
+            title = tk.Label(content_frame, text=document, fg="#3b3b3b", font=("Arial", 12))
+            title.grid(row=0, column=count, padx=5, pady=5, sticky="nsew")
+            count += 1
+
         for documents in data:
             columnCounter = 0
-
-            for document in documents:
-                if document not in fieldsName:
-                    fieldsName.append(document)
-                    self.title = customtkinter.CTkLabel(self, text=document, fg_color="#3b3b3b", corner_radius=6)
-                    self.title.configure(font=("Arial", 12))
-                    self.title.grid(row=0, column=count, padx=5, pady=5, sticky="nsew")
-                    count += 1
-                    
-                self.documentData = customtkinter.CTkLabel(self, text=documents[document], corner_radius=6)
-                self.documentData.configure(font=("Arial", 12))
-                self.documentData.grid(row=rowCounter, column=columnCounter, padx=5, pady=5, sticky="nsew")
+            for field in fieldsName:
+                documentData = tk.Label(content_frame, text=documents.get(field, ''), font=("Arial", 12))
+                documentData.grid(row=rowCounter, column=columnCounter, padx=5, pady=5, sticky="nsew")
                 columnCounter += 1
                 conta += 1
             rowCounter += 1
+
+        # Update the scroll region to include the new content
+        content_frame.update_idletasks()
+        canvas.config(scrollregion=canvas.bbox("all"))
+
+
 
         
 class ViewsFrameAddCollection(customtkinter.CTkFrame): #ver documentos
@@ -55,9 +102,6 @@ class ViewsFrameAddCollection(customtkinter.CTkFrame): #ver documentos
             tkMessageBox.showinfo("Erro!", "Selecione uma base de dados primeiro")
             raise ValueError("No db selected")
         
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
         self.title = "Adicionar Collection"
         
         self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
@@ -65,6 +109,15 @@ class ViewsFrameAddCollection(customtkinter.CTkFrame): #ver documentos
         
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
     
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Nome da Colletion:")
+        self.collection_name_label.grid(row=1, column=0, padx=20, pady=(10, 0), sticky="w")
+
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=2, column=0, padx=20, pady=(0, 10), sticky="w")
+
+        self.create_collection_button = customtkinter.CTkButton(self, text="Criar Collection", command=self.create_collection)
+        self.create_collection_button.grid(row=3, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+
     def create_collection(self):
         try:
             workingDatabase = MenuFrame.optionmenu_var.get()
@@ -77,28 +130,16 @@ class ViewsFrameAddCollection(customtkinter.CTkFrame): #ver documentos
             mydb = myclient[workingDatabase]
             mycol = mydb[collection_name]
 
-            # Insert a dummy document to create the collection
             mycol.insert_one({"_": "_"})
 
             tkMessageBox.showinfo("Sucesso!", f"Colletion '{collection_name}' criada com sucesso.")
             
-            # Refresh the menu frame to update the collection list
-            self.master.MenuFrame.getDatabases()
+            self.collection_name_entry.delete(0, len(self.collection_name_entry.get()))
+            
+            self.master.MenuFrame.getCollections(workingDatabase)
 
         except Exception as e:
             tkMessageBox.showinfo("Erro!", str(e))
-    
-    def setup_form(self):
-        # Label and Entry widget to input collection name
-        self.collection_name_label = customtkinter.CTkLabel(self, text="Nome da Colletion:")
-        self.collection_name_label.grid(row=1, column=0, padx=20, pady=10, sticky="w")
-
-        self.collection_name_entry = customtkinter.CTkEntry(self, width=40)
-        self.collection_name_entry.grid(row=1, column=1, padx=20, pady=10, sticky="w")
-
-        # Button to create the collection
-        self.create_collection_button = customtkinter.CTkButton(self, text="Criar Collection", command=self.create_collection)
-        self.create_collection_button.grid(row=2, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
 
 
 class ViewsFrameDeleteCollection(customtkinter.CTkFrame): #ver documentos
@@ -117,16 +158,45 @@ class ViewsFrameDeleteCollection(customtkinter.CTkFrame): #ver documentos
             raise ValueError("No db selected")
     
         
-        
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
         self.title = "Apagar Collection"
         
         self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
         self.title.configure(font=("Arial", 30))
         
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
+        
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Nome da Colletion:")
+        self.collection_name_label.grid(row=1, column=0, padx=20, pady=(10,0), sticky="w")
+
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=2, column=0, padx=20, pady=(0,10), sticky="w")
+        
+        self.delete_collection_button = customtkinter.CTkButton(self, text="Apagar Collection", command=self.deleteColection)
+        self.delete_collection_button.grid(row=3, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+
+        
+    def deleteColection(self):
+        try:
+            workingDatabase = MenuFrame.optionmenu_var.get()
+            collection_name = self.collection_name_entry.get()
+
+            if not collection_name:
+                tkMessageBox.showinfo("Erro!", "Insira o nome da collection.")
+                return
+
+            mydb = myclient[workingDatabase]
+            mycol = mydb[collection_name]
+
+            mycol.drop()
+
+            tkMessageBox.showinfo("Sucesso!", f"Colletion '{collection_name}' apagada com sucesso.")
+            
+            self.collection_name_entry.delete(0, len(collection_name))
+            
+            self.master.MenuFrame.getCollections(workingDatabase)
+
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", str(e))
         
 class ViewsFrame(customtkinter.CTkFrame): #ver documentos
     def __init__(self, master):
@@ -166,7 +236,7 @@ class ViewsFrame(customtkinter.CTkFrame): #ver documentos
         self.dataList.grid(row=1, column=0, padx="5", pady="5", sticky="nsew")
         
 
-class ViewsFrameAdd(customtkinter.CTkFrame): #ver documentos
+class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
     def __init__(self, master):
         super().__init__(master)
         try:
@@ -181,17 +251,8 @@ class ViewsFrameAdd(customtkinter.CTkFrame): #ver documentos
         except Exception as e:
             tkMessageBox.showinfo("Erro!", "Selecione uma base de dados primeiro")
             raise ValueError("No db selected")
-    
 
-        data = mycol.find()
-        arr = []
-        for dat in data:
-            arr.append(dat)
-        
-        print(arr)
-        
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.row = 4
         
         self.title = "Adicionar Documentos"
         
@@ -200,10 +261,72 @@ class ViewsFrameAdd(customtkinter.CTkFrame): #ver documentos
         
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
+        self.add_fieldBTN= customtkinter.CTkButton(self, text="Adicionar Campo", width=350, command=self.addField)
+        self.add_fieldBTN.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        
+        self.insertDocumentBTN = customtkinter.CTkButton(self, text="Inserir Dados", width=350, command=self.get_entry_values)
+        self.insertDocumentBTN.grid(row=1, column=1, padx=20, pady=10, sticky="ew")
+        
+        
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Nome do campo:")
+        self.collection_name_label.grid(row=2, column=0, padx=20, pady=(10,0), sticky="w")
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Valor do campo:")
+        self.collection_name_label.grid(row=2, column=1, padx=20, pady=(10,0), sticky="w")
+
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=3, column=0, padx=20, pady=(0,10), sticky="w")
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=3, column=1, padx=20, pady=(0,10), sticky="w")
+        
+        
+    def addField(self):
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=self.row, column=0, padx=20, pady=(0,10), sticky="w")
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=self.row, column=1, padx=20, pady=(0,10), sticky="w")
+        
+        self.row += 1
+    
+    def insertData(self, valores):
+        workingDatabase = MenuFrame.optionmenu_var.get()
+        workingCollection = MenuFrame.optionmenu_varCol.get()
+        
+        print(workingCollection, workingDatabase)
+        
+        mydb = myclient[workingDatabase]
+        mycol = mydb[workingCollection]
+        
+        mycol.delete_many({"_": "_"})
+        
+        counter = 1
+        pre = 0
+        for entry, value in valores.items():
+            print(counter)
+            if counter == 1:
+                pre = value
+                counter += 1
+            elif counter == 2:
+                if pre == "" and value == "":
+                    tkMessageBox.showinfo("Erro!", "Documentos vazios não serão inseridos")    
+                else:
+                    mycol.insert_one({f"{pre}": f"{value}"})
+                    counter = 1 
+            print(f"pre {pre}, valor atual {value}")
+    
+    def get_entry_values(self):
+        entry_values = {}
+        for widget in self.winfo_children():
+            if isinstance(widget, customtkinter.CTkEntry):
+                entry_values[widget] = widget.get()
+                        
+        self.insertData(entry_values)
+        
+        
+        
 
         
 
-class ViewsFrameDelete(customtkinter.CTkFrame): #ver documentos
+class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
     def __init__(self, master):
         super().__init__(master)
         try:
@@ -253,7 +376,7 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #Gerir Base de Dados
 
             
             tkMessageBox.showinfo("Sucesso!", f"Base de dados {database} criada com sucesso")
-            restart_program()
+            self.master.MenuFrame.getDatabases()
             
         except Exception as e:
             tkMessageBox.showinfo("Erro!", e)
@@ -266,7 +389,7 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #Gerir Base de Dados
             myclient.drop_database(database)
             
             tkMessageBox.showinfo("Sucesso!", f"Base de dados {database} apagada com sucesso")
-            restart_program()
+            self.master.MenuFrame.getDatabases()
             
         except Exception as e:
             tkMessageBox.showinfo("Erro!", e)
@@ -303,9 +426,8 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #Gerir Base de Dados
         self.DatabaseNameLabel.grid(row=2, column=0, padx=12, pady=5, sticky="nw")
         self.DatabaseName = customtkinter.CTkEntry(self, width=250)
         self.DatabaseName.grid(row=3, column=0, padx=12, pady=5, sticky="nw")
-        self.AddDB = customtkinter.CTkButton(self, text="Add Database", width=100, corner_radius=6, command=self.createDatabase)
-        self.AddDB.configure(font=("Arial", 20))
-        self.AddDB.grid(row=4, column=0, padx=12, pady=5, sticky="nw")
+        self.AddDB = customtkinter.CTkButton(self, text="Add Database", width=250, corner_radius=6, command=self.createDatabase)
+        self.AddDB.grid(row=4, column=0,columnspan=2, padx=12, pady=5, sticky="nw")
         
         self.buttonDelDB.configure(font=("Arial", 20))    
         self.buttonDelDB.grid(row=10, column=0, padx=12, pady=5, sticky="nw")
@@ -325,10 +447,11 @@ class ViewsFrameGerirDB(customtkinter.CTkFrame): #Gerir Base de Dados
             
         self.DatabaseNameLabel = customtkinter.CTkLabel(self, text="Delete Database Name ")
         self.DatabaseNameLabel.grid(row=3, column=0, padx=12, pady=5, sticky="nw")
+        self.DatabaseNameLabel.configure(font=("Arial", 20))
+
         self.DatabaseName = customtkinter.CTkEntry(self, width=250)
         self.DatabaseName.grid(row=4, column=0, padx=12, pady=5, sticky="nw")
-        self.AddDB = customtkinter.CTkButton(self, text="Delete Database", width=100, corner_radius=6, command=self.deleteDatabase)
-        self.AddDB.configure(font=("Arial", 20))
+        self.AddDB = customtkinter.CTkButton(self, text="Delete Database", width=250, corner_radius=6, command=self.deleteDatabase)
         self.AddDB.grid(row=5, column=0, padx=12, pady=5, sticky="nw")
         self.buttonDelDB.configure(font=("Arial", 20))    
         self.buttonDelDB.grid(row=2, column=0, padx=12, pady=5, sticky="nw")
@@ -378,14 +501,14 @@ class MenuFrame(customtkinter.CTkFrame):
         labelCol.grid(row=2, column=0, padx=20, pady=0, sticky="ew")
         MenuFrame.optionmenu_var = customtkinter.StringVar(value="Select DB")
         MenuFrame.optionmenu = customtkinter.CTkOptionMenu(self,values=dbs,
-                                                command=self.getCollection,
+                                                command=self.getCollections,
                                                 variable=MenuFrame.optionmenu_var)
 
         MenuFrame.optionmenu.grid(row=1, column=0, padx=20, pady=(0, 5), sticky="ew")
         
         return dbs
     
-    def getCollection(self, database):
+    def getCollections(self, database):
         cols = []
         
         database = MenuFrame.optionmenu_var.get()
