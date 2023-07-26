@@ -11,18 +11,16 @@ import sys
 import time
     
 customtkinter.set_appearance_mode("System") 
-customtkinter.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
+customtkinter.set_default_color_theme("blue")  
 
 class ScrollableDataFrame(tk.Frame):
     def __init__(self, master, data):
         super().__init__(master)
 
-        # Find all unique fields from the data
         fieldsName = set()
         for documents in data:
             fieldsName.update(documents.keys())
 
-        # Move 'id' field to the beginning of the set
         fieldsName.discard('_id')
         fieldsName = ['_id'] + sorted(fieldsName)
 
@@ -33,7 +31,10 @@ class ScrollableDataFrame(tk.Frame):
         canvas = tk.Canvas(self, bg="white", highlightthickness=0)
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Create horizontal scrollbar
+        y_scrollbar = tk.Scrollbar(self, orient=tk.VERTICAL, command=canvas.yview)
+        y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.configure(yscrollcommand=y_scrollbar.set)
+
         x_scrollbar = tk.Scrollbar(self, orient=tk.HORIZONTAL, command=canvas.xview)
         x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         canvas.configure(xscrollcommand=x_scrollbar.set)
@@ -55,9 +56,9 @@ class ScrollableDataFrame(tk.Frame):
                 conta += 1
             rowCounter += 1
 
-        # Update the scroll region to include the new content
         content_frame.update_idletasks()
         canvas.config(scrollregion=canvas.bbox("all"))
+
 
 
 
@@ -124,7 +125,6 @@ class ViewsFrameDeleteCollection(customtkinter.CTkFrame): #Apagar Collection
             workingDatabase = MenuFrame.optionmenu_var.get()
             workingCollection = MenuFrame.optionmenu_varCol.get()
             
-            print(workingCollection, workingDatabase)
             
             mydb = myclient[workingDatabase]
             
@@ -184,7 +184,6 @@ class ViewsFrame(customtkinter.CTkFrame): #ver documentos
             workingDatabase = MenuFrame.optionmenu_var.get()
             workingCollection = MenuFrame.optionmenu_varCol.get()
             
-            print(workingCollection, workingDatabase)
             
             mydb = myclient[workingDatabase]
             mycol = mydb[workingCollection]
@@ -199,7 +198,6 @@ class ViewsFrame(customtkinter.CTkFrame): #ver documentos
         for dat in data:
             arr.append(dat)
         
-        print(arr)
         
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -222,7 +220,6 @@ class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
             workingDatabase = MenuFrame.optionmenu_var.get()
             workingCollection = MenuFrame.optionmenu_varCol.get()
             
-            print(workingCollection, workingDatabase)
             
             mydb = myclient[workingDatabase]
             mycol = mydb[workingCollection]
@@ -273,7 +270,6 @@ class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
         workingDatabase = MenuFrame.optionmenu_var.get()
         workingCollection = MenuFrame.optionmenu_varCol.get()
         
-        print(workingCollection, workingDatabase)
         
         mydb = myclient[workingDatabase]
         mycol = mydb[workingCollection]
@@ -283,7 +279,6 @@ class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
         counter = 1
         pre = 0
         for entry, value in valores.items():
-            print(counter)
             if counter == 1:
                 pre = value
                 counter += 1
@@ -293,7 +288,6 @@ class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
                 else:
                     mycol.insert_one({f"{pre}": f"{value}"})
                     counter = 1 
-            print(f"pre {pre}, valor atual {value}")
             
     def deleteLastEntry(self):
         children = self.winfo_children()
@@ -325,6 +319,138 @@ class ViewsFrameAdd(customtkinter.CTkScrollableFrame): #Add Documents
         self.insertData(entry_values)
         
         
+
+class ViewsFrameEdit(customtkinter.CTkScrollableFrame): #Editar Documents
+    def __init__(self, master):
+        super().__init__(master)
+        try:
+            workingDatabase = MenuFrame.optionmenu_var.get()
+            workingCollection = MenuFrame.optionmenu_varCol.get()
+            
+            
+            mydb = myclient[workingDatabase]
+            mycol = mydb[workingCollection]
+            
+        except Exception as e:
+            tkMessageBox.showinfo("Erro!", "Selecione uma base de dados ou collection primeiro")
+            raise ValueError("No db selected")
+
+        self.row = 7
+        
+        self.title = "Editar Documentos"
+        
+        self.title = customtkinter.CTkLabel(self, text=self.title, corner_radius=6)
+        self.title.configure(font=("Arial", 30))
+        
+        self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
+        
+        self.delete_entryBTN = customtkinter.CTkButton(self, text="Remover Campo", command=self.deleteLastEntry)
+        self.delete_entryBTN.grid(row=1, column=0, pady=10, sticky="e")
+
+        self.add_fieldBTN = customtkinter.CTkButton(self, text="Adicionar Campo", command=self.addField)
+        self.add_fieldBTN.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+        self.insertDocumentBTN = customtkinter.CTkButton(self, text="Atualizar Dados", width=350, command=self.get_entry_values)
+        self.insertDocumentBTN.grid(row=1, column=1, padx=20, pady=10, sticky="ew")
+        
+        self.changeTo_label = customtkinter.CTkLabel(self, text="Alterar Campo:")
+        self.changeTo_label.grid(row=3, column=0, padx=20, pady=(10,0), sticky="w")
+        self.changeToValue_label = customtkinter.CTkLabel(self, text="Para valor:")
+        self.changeToValue_label.grid(row=3, column=1, padx=20, pady=(10,0), sticky="w")
+        
+        self.changeTo_entry = customtkinter.CTkEntry(self, width=250)
+        self.changeTo_entry.grid(row=4, column=0, padx=20, pady=(0,10), sticky="w")
+        self.changeToValue_entry = customtkinter.CTkEntry(self, width=250)
+        self.changeToValue_entry.grid(row=4, column=1, padx=20, pady=(0,10), sticky="w")
+        
+        
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Nome do campo (filtros):")
+        self.collection_name_label.grid(row=5, column=0, padx=20, pady=(10,0), sticky="w")
+        self.collection_name_label = customtkinter.CTkLabel(self, text="Valor do campo (filtros):")
+        self.collection_name_label.grid(row=5, column=1, padx=20, pady=(10,0), sticky="w")
+
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=6, column=0, padx=20, pady=(0,10), sticky="w")
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=6, column=1, padx=20, pady=(0,10), sticky="w")
+        
+        
+    def addField(self):
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=self.row, column=0, padx=20, pady=(0,10), sticky="w")
+        self.collection_name_entry = customtkinter.CTkEntry(self, width=250)
+        self.collection_name_entry.grid(row=self.row, column=1, padx=20, pady=(0,10), sticky="w")
+        
+        self.row += 1
+
+
+    def updateData(self, valores):
+        workingDatabase = MenuFrame.optionmenu_var.get()
+        workingCollection = MenuFrame.optionmenu_varCol.get()
+
+        mydb = myclient[workingDatabase]
+        mycol = mydb[workingCollection]
+
+        updateFilters = {}
+        
+        counter = 1
+        pre = 0
+        for entry, value in valores.items():
+            if counter == 1:
+                pre = value
+                counter += 1
+            elif counter == 2:
+                if pre == "" and value == "":
+                    tkMessageBox.showinfo("Erro!", "Documentos vazios não serão utilizados para filtrar, continuando...")
+                else:
+
+                    updateFilters[f"{pre}"] = value
+                    counter = 1
+
+        if not updateFilters:
+            tkMessageBox.showinfo("Erro!", "Nenhum filtro fornecido para a atualização.")
+        else:
+            try:
+                update_value = self.changeToValue_entry.get()
+                update_field = self.changeTo_entry.get()
+
+                if not update_field or not update_value:
+                    tkMessageBox.showinfo("Erro!", "Campos para atualização não foram fornecidos.")
+                else:
+                    print(updateFilters)
+                    mycol.update_many(updateFilters, {"$set": {update_field: update_value}})
+                    tkMessageBox.showinfo("Sucesso!", "Documentos atualizados com sucesso!")
+            except pymongo.errors.PyMongoError as e:
+                tkMessageBox.showinfo("Erro!", f"Ocorreu um erro ao atualizar os documentos: {str(e)}")
+  
+
+            
+    def deleteLastEntry(self):
+        first_entries = [self.changeTo_entry, self.changeToValue_entry]
+
+        for x in range(2):
+            children = self.winfo_children()
+
+            for widget in reversed(children):
+                if isinstance(widget, customtkinter.CTkEntry) and widget not in first_entries:
+                    widget.grid_forget()
+                    widget.destroy()
+                    break
+
+        if not self.row <= 9:
+            self.row -= 2
+
+
+    
+    def get_entry_values(self):
+        entry_values = {}
+        for widget in self.winfo_children():
+            if isinstance(widget, customtkinter.CTkEntry):
+                if widget not in (self.changeTo_entry, self.changeToValue_entry):
+                    entry_values[widget] = widget.get()
+
+        self.updateData(entry_values)
+   
         
 
         
@@ -336,7 +462,6 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
             workingDatabase = MenuFrame.optionmenu_var.get()
             workingCollection = MenuFrame.optionmenu_varCol.get()
             
-            print(workingCollection, workingDatabase)
             
             mydb = myclient[workingDatabase]
             mycol = mydb[workingCollection]
@@ -355,10 +480,10 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
         self.title.grid(row=0, column=0, padx=5, pady=5, sticky="nw")
         
         self.delete_entryBTN = customtkinter.CTkButton(self, text="Remover Campo", command=self.deleteLastEntry)
-        self.delete_entryBTN.grid(row=1, column=0, padx=20, pady=10, sticky="e")
+        self.delete_entryBTN.grid(row=1, column=0, pady=10, sticky="e")
 
         self.add_fieldBTN = customtkinter.CTkButton(self, text="Adicionar Campo", command=self.addField)
-        self.add_fieldBTN.grid(row=1, column=0, padx=20, pady=10, sticky="w")
+        self.add_fieldBTN.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
         self.insertDocumentBTN = customtkinter.CTkButton(self, text="Apagar Dados", width=350, command=self.get_entry_values)
         self.insertDocumentBTN.grid(row=1, column=1, padx=20, pady=10, sticky="ew")
@@ -387,8 +512,6 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
         workingDatabase = MenuFrame.optionmenu_var.get()
         workingCollection = MenuFrame.optionmenu_varCol.get()
         
-        print(workingCollection, workingDatabase) 
-        
         mydb = myclient[workingDatabase]
         mycol = mydb[workingCollection]
         
@@ -399,7 +522,6 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
         counter = 1
         pre = 0
         for entry, value in valores.items():
-            print(counter)
             if counter == 1:
                 pre = value
                 counter += 1
@@ -413,9 +535,7 @@ class ViewsFrameDelete(customtkinter.CTkFrame): #Delete Documents
                         deleteFilters[f"{pre}"] = value
                     counter = 1
 
-        print(deleteFilters)
         
-        print(mycol.delete_many(deleteFilters))
         tkMessageBox.showinfo("Sucesso!", "Documentos apagados com sucesso!")    
 
             
@@ -544,14 +664,13 @@ class ViewsFrameSearch(customtkinter.CTkScrollableFrame): # Pesquisar
             workingDatabase = MenuFrame.optionmenu_var.get()
             workingCollection = MenuFrame.optionmenu_varCol.get()
             
-            print(workingCollection, workingDatabase)
             
             mydb = myclient[workingDatabase]
             self.mycol = mydb[workingCollection]
             
-            # Get the list of fields from the collection
-            field_names = set()  # Use a set to store unique field names
-            for document in self.mycol.find():  # Fetch a single document from the collection
+
+            field_names = set() 
+            for document in self.mycol.find():  
                 field_names.update(document.keys())
                 
             field_names = sorted(field_names)
@@ -584,32 +703,50 @@ class ViewsFrameSearch(customtkinter.CTkScrollableFrame): # Pesquisar
                 checkbox.grid(row=row, column=0, padx=5, pady=2, sticky="w")
                 row += 1
             
+        self.search_label = customtkinter.CTkLabel(self, text="Filtrar (use JSON): ", corner_radius=6)
+        self.search_label.grid(row= row, column=0, padx=5, sticky="nw")
+        self.searchBox = customtkinter.CTkEntry(self)
+        self.searchBox.grid(row=row+1, column=0, padx=5, pady=2, sticky="w")   
+        
         self.searchButton = customtkinter.CTkButton(self, text="Pesquisar", corner_radius=6, command=self.searchFor)
-        self.searchButton.grid(row=row, column=0, padx=5, pady=2, sticky="w")
+        self.searchButton.grid(row=row+2, column=0, padx=5, pady=2, sticky="w")
             
         
     def searchFor(self):
-        filtered_field_names = [field for field, var in self.field_vars.items() if var.get() == 1]
+        
+        workingDatabase = MenuFrame.optionmenu_var.get()
+        workingCollection = MenuFrame.optionmenu_varCol.get()
+        mydb = myclient[workingDatabase]
+        self.mycol = mydb[workingCollection]
+        
 
-        arr = list(self.mycol.find({}, filtered_field_names))
-        try:
-            self.dataList.destroy()
-        except Exception as e:
-            ...
+        field_names = set() 
+        for document in self.mycol.find():  
+            field_names.update(document.keys())
+            
+        field_names = sorted(field_names)
+        
+        
+        filtered_field_names = [field for field, var in self.field_vars.items() if var.get() == 1]
+        filterSearch = self.searchBox.get()
+    
+        if filterSearch: 
+            filterSearch = json.loads(filterSearch)       
+            arr = list(self.mycol.find(filterSearch, filtered_field_names))
+        else:
+            arr = list(self.mycol.find({}, filtered_field_names))
+
+        
         self.dataList = ScrollableDataFrame(self, arr)
         self.dataList.grid(row=2, rowspan=100, column=1, padx="5", pady="5", sticky="nsew")
         
 
-
-
-        
 
 class MenuFrame(customtkinter.CTkFrame):
     
     optionmenu_var = None
     
     def getDatabases(self):
-        print("cenas")
         dbs = []
         
         for db in myclient.list_databases():
@@ -676,6 +813,9 @@ class MenuFrame(customtkinter.CTkFrame):
         self.buttonAddDocs = customtkinter.CTkButton(self, text="Adicionar Documento", command=master.changeFrameAddDoc)
         self.buttonAddDocs.grid(row=10, column=0, padx=20, pady=10, sticky="w")
         
+        self.buttonAddDocs = customtkinter.CTkButton(self, text="Editar Documento", command=master.changeFrameEditDoc)
+        self.buttonAddDocs.grid(row=10, column=0, padx=20, pady=10, sticky="w")
+        
         self.buttonDeleteDocs = customtkinter.CTkButton(self, text="Apagar Documento", command=master.changeFrameDeleteDoc)
         self.buttonDeleteDocs.grid(row=11, column=0, padx=20, pady=10, sticky="w")
         
@@ -724,6 +864,10 @@ class App(customtkinter.CTk):
         
     def changeFrameAddDoc(self):
         self.ViewsFrame = ViewsFrameAdd(self)
+        self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
+        
+    def changeFrameEditDoc(self):
+        self.ViewsFrame = ViewsFrameEdit(self)
         self.ViewsFrame.grid(row=0, column=1, padx=(0,5), pady=5, sticky="nsew")
         
     def changeFrameDeleteDoc(self):
